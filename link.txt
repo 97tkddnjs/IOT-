@@ -4,8 +4,11 @@ https://www.youtube.com/watch?v=tenLLerqop8
 한글 설정한 링크
 https://blog.naver.com/PostView.nhn?blogId=icbanq&logNo=222108314334&categoryNo=78&parentCategoryNo=&from=thumbnailList
 
+
+python 3.7버전으로 높이는 것
+https://m.blog.naver.com/PostView.nhn?blogId=icbanq&logNo=221687349707&referrerCode=0&searchKeyword=%ED%8C%8C%EC%9D%B4%EC%8D%AC
+
+
 opencv설치 링크
 https://bebutae.tistory.com/153
-
-
 
