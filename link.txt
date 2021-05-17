@@ -1,0 +1,11 @@
+라즈베리 파이 설치한 링크
+https://www.youtube.com/watch?v=tenLLerqop8
+
+한글 설정한 링크
+https://blog.naver.com/PostView.nhn?blogId=icbanq&logNo=222108314334&categoryNo=78&parentCategoryNo=&from=thumbnailList
+
+opencv설치 링크
+https://bebutae.tistory.com/153
+
+
+
