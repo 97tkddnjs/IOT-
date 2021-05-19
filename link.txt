@@ -12,3 +12,5 @@ https://m.blog.naver.com/PostView.nhn?blogId=icbanq&logNo=221687349707&referrerC
 opencv설치 링크
 https://webnautes.tistory.com/916
 
+심볼릭 링크 관랸
+https://leebaro.tistory.com/entry/usrbinpython-bad-interpreter-No-such-file-or-directory-%EC%98%A4%EB%A5%98-%EB%B0%9C%EC%83%9D-%EC%8B%9C
