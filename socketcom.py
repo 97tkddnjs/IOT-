@@ -2,9 +2,10 @@ import socket
 import pymysql
 import datetime
 from apscheduler.schedulers.background import BackgroundScheduler
-import time
 from threading import Thread
 import threading
+import os
+import deeplearning as dl
 
 lock = threading.Lock()
 
@@ -26,14 +27,26 @@ class Socket():
         self.sched = BackgroundScheduler(timezone="Asia/seoul")
         self.sched.add_job(self.cleanAlgorithm, 'cron', hour=0)  # 인공지능 살균 스케줄러
 
-        self.cname=''
-        self.ccheck=False
-
         self.fiveMin_data=[[],[],[],[],[],[],[],[],[]]
         self.trainResult_data=[[],[],[],[],[],[],[],[],[]]
+        self.cleantime=[[],[],[],[],[],[],[],[],[]]
         self.train_data=[]
+        self.cname = ''
+        self.ccheck = False
 
         self.STECLEAN=[]
+
+    def get_CAMlist(self):
+        return self.CAMlist
+
+    def get_sensor(self):
+        pass
+
+    def command_clean(self, id):
+        pass
+
+    def get_document(self, id):
+        pass
 
     # 인공지능 기반 살균 알고리즘
     def cleanAlgorithm(self):
@@ -43,15 +56,32 @@ class Socket():
         # 전처리 - 5분단위로
         self.make_fiveMin()
 
-        # 전처리 - 데이터 합치기
-        self.make_merge()
-
         # 학습
+        for i, v in enumerate(self.CAMlist):
+            x = self.fiveMin_data[i]
+            y = self.fiveMin_data[i]
+            now = datetime.datetime.today().weekday()
+            if now==5 or now==6:
+                if not os.path.exists('model/' + v[0][0] + '/weekend'):
+                    os.makedirs('model/' + v[0][0] + '/weekend')
+                    dl.make_model(x, y, 'model/' + v[0][0] + '/weekend/weekend')
+                else:
+                    dl.retrain_model(x, y, 'model/' + v[0][0] + '/weekend/weekend')
+            else:
+                if not os.path.exists('model/' + v[0][0] + '/weekly'):
+                    os.makedirs('model/' + v[0][0] + '/weekly')
+                    dl.make_model(x, y, 'model/' + v[0][0] + '/weekly/weekly')
+                else:
+                    dl.retrain_model(x, y, 'model/' + v[0][0] + '/weekly/weekly')
 
-        # 학습결과기반 살균 알고리즘
+        # 딥러닝 모델에서 결과 받아오기
+
+        # 받아온 학습결과기반 살균 알고리즘
+
 
         # 살균알고리즘 기반 살균 시간 저장
         self.save_cleantime()
+
 
     # 살균알고리즘 기반 살균 시간 저장 - 미완
     def save_cleantime(self):
@@ -69,15 +99,6 @@ class Socket():
                 str = dStart.strftime('%Y-%m-%d %H:%M:%S')
                 timelist.append(str)
                 break
-
-    # 데이터 합치기
-    def make_merge(self):
-        for i in range(len(self.fiveMin_data[0])):
-            temp = ''
-            for j in range(len(self.CAMlist)):
-                temp = str(self.fiveMin_data[j][i]) + temp
-            temp = int(temp, 2)
-            self.train_data.append(temp)
 
     # 데이터 전처리(5분마다 처리)
     def make_fiveMin(self):
@@ -125,7 +146,6 @@ class Socket():
                     next_str = next.strftime('%Y-%m-%d %H:%M:%S')
                     break
 
-
     # 학습 데이터 검증
     def verificationData(self):
         now = datetime.datetime.now()
@@ -162,7 +182,12 @@ class Socket():
     def commandClean(self):
         while True:
             now = datetime.datetime.now()  # 현재 날짜 얻어오기
-            formatted_data = now.strftime('%Y=%m-%d %H:%M:%S')  # 현재 시간 문자열 포맷팅
+            formatted_data = now.strftime('%Y=%m-%d %H:%M')  # 현재 시간 문자열 포맷팅
+            for i, v in self.STElist:
+                for j in self.cleantime[i]:
+                    if formatted_data==j:
+                        self.cname=self.STElist[i]
+                        self.ccheck=True
 
     # 카메라 라즈베리파이와 통신해서 데이터 삽입
     def cam_handler(self, conn, addr, name, terminator="bye"):
@@ -184,22 +209,17 @@ class Socket():
 
     # 살규기 라즈베리파이와 통신해 여러 명령 전송 - 미완
     def clean_handler(self, conn, addr, name, terminator="bye"):
-
         while True:
-            conn.send(name.encode(encoding='utf_8', errors='strict'))
             if self.cname==name and self.ccheck:
-                print(name)
-                time.sleep(1)
+                conn.send('clean'.encode(encoding='utf_8', errors='strict'))
                 data = conn.recv(1024)
-
+                self.cname=''
+                self.ccheck=False
                 if data == b"exit":
                     break
                 elif data[0:12] == "cleanResult":
                     pass
 
-                now = datetime.datetime.now()
-                formatted_data = now.strftime('%Y=%m-%d %H:%M:%S')
-                print(name, formatted_data, data)
 
     def run_server(self, host='', port=8888):
         check=False
@@ -215,18 +235,23 @@ class Socket():
                 # 소켓 스레드 통신
                 sock.listen(5)
                 conn, addr = sock.accept()
-                name = conn.recv(1024).decode(encoding='utf_8', errors='strict')
-                if name[0:3]=='CAM': # 통신대상이 카메라일 경우
-                    self.CAMlist.append(name)
-                    self.CAMlist.sort(key=lambda x: x[4])
-                    self.fiveMin_data.append([])
-                    t = Thread(target=self.cam_handler, name=name, args=(conn, addr, name))
+                id = conn.recv(1024).decode(encoding='utf_8', errors='strict')
+                if id[0:3]=='CAM': # 통신대상이 카메라일 경우
+                    temp = id.split(',')
+                    id = temp[0]
+                    name = temp[1]
+                    os.mkdir('model/'+id)
+                    temp_list = [id, name]
+                    self.CAMlist.append(temp_list)
+                    self.CAMlist.sort(key=lambda x: x[0][4])
+                    print(self.CAMlist)
+                    t = Thread(target=self.cam_handler, name=id, args=(conn, addr, id))
                     t.start()
-                elif name[0:3]=='STE': # 통신대상이 살균기일 경우
-                    self.STElist.append(name)
+                elif id[0:3]=='STE': # 통신대상이 살균기일 경우
+                    self.STElist.append(id)
                     self.STElist.sort(key=lambda x: x[4])
                     self.STECLEAN.append(False)
-                    t = Thread(target=self.clean_handler, name=name, args=(conn, addr, name))
+                    t = Thread(target=self.clean_handler, name=id, args=(conn, addr, id))
                     t.start()
             sock.close()
 
